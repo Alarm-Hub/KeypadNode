@@ -16,3 +16,7 @@ $ ./bin/DoorManager
 ### Testing
 
 ``make test``
+
+### License
+
+[MIT](LICENSE.md)
