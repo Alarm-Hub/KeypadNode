@@ -61,4 +61,5 @@ func ServeAPI() {
 	r := mux.NewRouter()
 	r.HandleFunc("/version", handleVersion)
 	r.HandleFunc("/gate/{id}/{action}", handleGate)
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

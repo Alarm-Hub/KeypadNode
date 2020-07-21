@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/Phill93/DoorManager/api"
 	"github.com/Phill93/DoorManager/config"
 	"github.com/Phill93/DoorManager/log"
 	"github.com/Phill93/DoorManager/version"
@@ -68,6 +69,7 @@ func main() {
 	defer wiegand.CleanGpios()
 	go wiegand.InitGpio(events)
 	go handleEvents(events)
+	go api.ServeAPI()
 
 	for {
 		time.Sleep(1 * time.Second)
