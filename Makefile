@@ -39,7 +39,7 @@ build-rpi:
 
 
 get-deps:
-	dep ensure
+	go mod tidy
 
 build-alpine:
 	@echo "building ${BIN_NAME} ${VERSION}"
