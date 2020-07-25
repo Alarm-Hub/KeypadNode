@@ -21,6 +21,7 @@ type Response struct {
 }
 
 func handleVersion(w http.ResponseWriter, r *http.Request) {
+	log.Infof("got version request from %s", r.Host)
 	version := Version{
 		BuildDate: version2.BuildDate,
 		GitCommit: version2.GitCommit,
@@ -39,27 +40,42 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func handleGate(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		vars := mux.Vars(r)
-		log.Debugf("Request to %d gate %d from %s", vars["action"], vars["id"], r.Host)
-		response := Response{Success: true}
-		js, err := json.Marshal(response)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(js)
-	default:
-		http.Error(w, "Not Implemented", http.StatusNotImplemented)
+func handleBeep(w http.ResponseWriter, r *http.Request) {
+	log.Infof("got beep request from %s", r.Host)
+	response := Response{
+		Success: true,
 	}
+
+	js, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func handleLed(w http.ResponseWriter, r *http.Request) {
+	log.Infof("got led request from %s", r.Host)
+	response := Response{
+		Success: true,
+	}
+
+	js, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func ServeAPI() {
 	r := mux.NewRouter()
 	r.HandleFunc("/version", handleVersion)
-	r.HandleFunc("/gate/{id}/{action}", handleGate)
+	r.HandleFunc("/beep", handleBeep)
+	r.HandleFunc("/led", handleLed)
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
