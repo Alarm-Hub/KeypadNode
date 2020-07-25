@@ -1,77 +1,44 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"github.com/Phill93/DoorManager/api"
-	"github.com/Phill93/DoorManager/config"
-	"github.com/Phill93/DoorManager/log"
-	"github.com/Phill93/DoorManager/version"
-	"github.com/Phill93/DoorManager/wiegand"
-	"time"
+  "fmt"
+  "github.com/Phill93/DoorManager/code"
+  "github.com/Phill93/DoorManager/log"
+  "github.com/Phill93/DoorManager/wiegand"
+  "time"
 )
 
-func checkTimeout(timestamp time.Time, timeout int) bool {
-	now := time.Now()
-	offset := now.Sub(timestamp)
-	if offset.Seconds() > float64(timeout) {
-		log.Infof("timeout reached! %d", offset.Seconds())
-		return true
-	} else {
-		log.Infof("timeout not reached! %d", offset.Seconds())
-		return false
-	}
-}
-
-func handleEvents(events chan wiegand.Event) {
-	var code []string
-	var timestamp time.Time
-	for {
-		e := <-events
-		switch e.Type {
-		case "key":
-			log.Infof("Received key %s", e.Value)
-			if e.Value != "ENT" && e.Value != "ESC" {
-				if len(code) == 0 {
-					timestamp = time.Now()
-					log.Info("Recived key %v", timestamp)
-				}
-				code = append(code, e.Value)
-			} else if e.Value == "ENT" {
-				log.Infof("code is %s", code)
-				code = nil
-			} else if e.Value == "ESC" || checkTimeout(timestamp, 2) {
-				log.Info("clear code buffer")
-				code = nil
-			}
-		case "card":
-			log.Infof("Received card id %s", e.Value)
-		}
-	}
-}
-
 func main() {
-	versionFlag := flag.Bool("version", false, "Version")
-	c := config.Config()
-	flag.Parse()
-	if *versionFlag {
-		fmt.Println("Build Date:", version.BuildDate)
-		fmt.Println("Git Commit:", version.GitCommit)
-		fmt.Println("Version:", version.Version)
-		fmt.Println("Go Version:", version.GoVersion)
-		fmt.Println("OS / Arch:", version.OsArch)
-		return
-	}
+  log.Infof("Application started at %s", time.Now())
 
-	events := make(chan wiegand.Event, 1)
+  pad := wiegand.Keypad{}
+  code2 := code.Code{}
 
-	fmt.Print(c.Get("Test"))
-	defer wiegand.CleanGpios()
-	go wiegand.InitGpio(events)
-	go handleEvents(events)
-	go api.ServeAPI()
+  go func(p wiegand.Keypad, c code.Code) {
+    padKey := make(chan string)
+    pad.AddListener("key", padKey)
+    for {
+      select {
+      case key := <-padKey:
+        log.Printf("Got key %s", key)
+        c.Input(key)
+      }
+    }
+  }(pad, code2)
 
-	for {
-		time.Sleep(1 * time.Second)
-	}
+  go func(c code.Code) {
+    codeCode := make(chan string)
+    c.AddListener("ready", codeCode)
+    for {
+      log.Debugf("Waiting for code!")
+      fmt.Printf("Recieved code %s", <-codeCode)
+    }
+  }(code2)
+
+  defer wiegand.CleanGpios()
+  go wiegand.InitReader(pad)
+
+  for {
+    time.Sleep(1 * time.Second)
+  }
 }
