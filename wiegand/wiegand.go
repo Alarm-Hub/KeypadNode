@@ -1,13 +1,13 @@
 package wiegand
 
 import (
-  "fmt"
-  "github.com/Phill93/DoorManager/log"
-  "github.com/warthog618/gpiod"
-  "github.com/warthog618/gpiod/device/rpi"
-  "math"
-  "math/bits"
-  "time"
+	"fmt"
+	"github.com/Phill93/DoorManager/log"
+	"github.com/warthog618/gpiod"
+	"github.com/warthog618/gpiod/device/rpi"
+	"math"
+	"math/bits"
+	"time"
 )
 
 var c *gpiod.Chip
@@ -23,46 +23,40 @@ type Keypad struct {
 }
 
 func (k *Keypad) AddListener(e string, ch chan string) {
-  fmt.Println("Add L")
-  fmt.Println(k)
-  if k.listeners == nil {
-    k.listeners = make(map[string][] chan string)
-  }
-  log.Debugf("Adding channel for event %s", e)
-  if _, ok := k.listeners[e]; ok {
-    k.listeners[e] = append(k.listeners[e], ch)
-  } else {
-    k.listeners[e] = []chan string{ch}
-  }
+	if k.listeners == nil {
+		k.listeners = make(map[string][]chan string)
+	}
+	log.Debugf("Adding channel for event %s", e)
+	if _, ok := k.listeners[e]; ok {
+		k.listeners[e] = append(k.listeners[e], ch)
+	} else {
+		k.listeners[e] = []chan string{ch}
+	}
 }
 
 func (k *Keypad) RemoveListener(e string, ch chan string) {
-  log.Debugf("Removing channel for event %s", e)
-  if _, ok := k.listeners[e]; ok {
-    for i := range k.listeners[e]{
-      if k.listeners[e][i] == ch {
-        k.listeners[e] = append(k.listeners[e][:i], k.listeners[e][i+1:]...)
-        break
-      }
-    }
-  }
+	log.Debugf("Removing channel for event %s", e)
+	if _, ok := k.listeners[e]; ok {
+		for i := range k.listeners[e] {
+			if k.listeners[e][i] == ch {
+				k.listeners[e] = append(k.listeners[e][:i], k.listeners[e][i+1:]...)
+				break
+			}
+		}
+	}
 }
 
 func (k *Keypad) Emit(e string, response string) {
-  fmt.Println("Emit")
-  k.AddListener("Test", make(chan string))
-  fmt.Println(k.listeners)
-  log.Debugf("Event %s is emitted!", e)
-  if _, ok := k.listeners[e]; ok {
-    fmt.Print("1")
-    for _, handler := range k.listeners[e] {
-      fmt.Print("Found!")
-      go func(handler chan string) {
-        log.Debug("Writing data!")
-        handler <- response
-      } (handler)
-    }
-  }
+	log.Debugf("Event %s is emitted!", e)
+	if _, ok := k.listeners[e]; ok {
+		for _, handler := range k.listeners[e] {
+			fmt.Print("Found!")
+			go func(handler chan string) {
+				log.Debug("Writing data!")
+				handler <- response
+			}(handler)
+		}
+	}
 }
 
 //Data
@@ -107,18 +101,13 @@ func (k *Keypad) processData(data uint32, parity uint32, bits uint32) {
 	}
 }
 
-func InitReader(pad Keypad) {
-  fmt.Println("Start")
-  fmt.Println(pad)
-	c, _ = gpiod.NewChip("gpiochip0", gpiod.WithConsumer("DoorManager_Wiegand"))
+func InitReader(pad *Keypad) {
+	c, _ = gpiod.NewChip("gpiochip0", gpiod.WithConsumer("KeypadNode"))
 	lowWd = make(chan bool, 1)
 	c.RequestLine(rpi.GPIO14, gpiod.WithFallingEdge(lowHandler))
 	highWd = make(chan bool, 1)
 	c.RequestLine(rpi.GPIO15, gpiod.WithFallingEdge(highHandler))
 	time.Sleep(time.Second)
-  fmt.Println("B. Emit")
-  fmt.Println(pad)
-  pad.Emit("key", "1")
 	for {
 		select {
 		case <-lowWd:
