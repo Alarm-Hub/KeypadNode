@@ -2,9 +2,9 @@ package wiegand
 
 import (
 	"fmt"
+	"github.com/Phill93/DoorManager/config"
 	"github.com/Phill93/DoorManager/log"
 	"github.com/warthog618/gpiod"
-	"github.com/warthog618/gpiod/device/rpi"
 	"math"
 	"math/bits"
 	"time"
@@ -102,11 +102,12 @@ func (k *Keypad) processData(data uint32, parity uint32, bits uint32) {
 }
 
 func InitReader(pad *Keypad) {
+	cfg := config.Config()
 	c, _ = gpiod.NewChip("gpiochip0", gpiod.WithConsumer("KeypadNode"))
 	lowWd = make(chan bool, 1)
-	c.RequestLine(rpi.GPIO14, gpiod.WithFallingEdge(lowHandler))
+	c.RequestLine(cfg.GetInt("data_low"), gpiod.WithFallingEdge(lowHandler))
 	highWd = make(chan bool, 1)
-	c.RequestLine(rpi.GPIO15, gpiod.WithFallingEdge(highHandler))
+	c.RequestLine(cfg.GetInt("data_high"), gpiod.WithFallingEdge(highHandler))
 	time.Sleep(time.Second)
 	for {
 		select {

@@ -11,7 +11,7 @@ func main() {
 	log.Infof("Application started at %s", time.Now())
 
 	pad := wiegand.Keypad{}
-	code2 := code.Code{Timeout: 10}
+	code2 := code.Code{}
 
 	go func(p *wiegand.Keypad, c *code.Code) {
 		padKey := make(chan string)

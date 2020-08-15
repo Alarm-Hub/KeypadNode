@@ -1,6 +1,7 @@
 package code
 
 import (
+	"github.com/Phill93/DoorManager/config"
 	"github.com/Phill93/DoorManager/log"
 	"strings"
 	"time"
@@ -9,7 +10,6 @@ import (
 type Code struct {
 	digits    []string
 	startTime time.Time
-	Timeout   int
 	listeners map[string][]chan string
 }
 
@@ -53,8 +53,8 @@ func (c *Code) Input(key string) {
 		c.startTime = time.Now()
 		log.Debugf("Start time empty! Set to now %s", c.startTime)
 	}
-
-	if checkTimeout(c.startTime, c.Timeout) {
+	cfg := config.Config()
+	if checkTimeout(c.startTime, cfg.GetInt("pad_timeout")) {
 		c.Clear()
 	} else {
 		c.startTime = time.Now()

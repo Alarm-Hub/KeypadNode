@@ -49,10 +49,12 @@ func readViperConfig(appName string) *viper.Viper {
 	v.AutomaticEnv()
 
 	// global defaults
-	
+
 	v.SetDefault("json_logs", false)
 	v.SetDefault("loglevel", "debug")
-	
+	v.SetDefault("data_low", 14)
+	v.SetDefault("data_high", 15)
+	v.SetDefault("pad_timeout", 10)
 
 	return v
 }
