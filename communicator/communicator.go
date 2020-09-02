@@ -8,9 +8,7 @@ import (
 	"github.com/Phill93/DoorManager/config"
 	"github.com/Phill93/DoorManager/log"
 	jwt "github.com/dgrijalva/jwt-go"
-	"io"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -78,7 +76,7 @@ func (c *communicator) Refresh() error {
 		c.access = r.access
 		c.refresh = r.refresh
 		c.lastRefresh = time.Now()
-		_ = c.VerifyAccess()
+		_, _ = c.VerifyAccess()
 		return nil
 	} else {
 		return errors.New("Base Url or access token empty")
