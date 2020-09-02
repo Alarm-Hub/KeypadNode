@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/Phill93/DoorManager/code"
-  "github.com/Phill93/DoorManager/communicator"
-  "github.com/Phill93/DoorManager/config"
-  "github.com/Phill93/DoorManager/log"
+	//"github.com/Phill93/DoorManager/communicator"
+	//"github.com/Phill93/DoorManager/config"
+	"github.com/Phill93/DoorManager/log"
 	"github.com/Phill93/DoorManager/wiegand"
 	"time"
 )
@@ -12,13 +12,13 @@ import (
 func main() {
 	log.Infof("Application started at %s", time.Now())
 
-	cfg := config.Config()
+	//cfg := config.Config()
 
-	c := communicator.NewCommunicator(cfg.GetString("access_token"), cfg.GetString("refresh_token"), cfg.GetString("controller_url"))
-	err := c.VerifyAccess()
-	if err != nil {
-	  panic(err)
-  }
+	//c := communicator.NewCommunicator(cfg.GetString("access_token"), cfg.GetString("refresh_token"), cfg.GetString("controller_url"))
+	//err := c.VerifyAccess()
+	//if err != nil {
+	//  panic(err)
+	//}
 
 	pad := wiegand.Keypad{}
 	code2 := code.Code{}
@@ -44,7 +44,6 @@ func main() {
 		}
 	}(&code2)
 
-	defer wiegand.CleanGpios()
 	go wiegand.InitReader(&pad)
 
 	for {
