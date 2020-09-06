@@ -51,9 +51,7 @@ func InitReader(pad *Keypad) {
 			pad.Emit("key", "ESC")
 		case keyboard.KeyEnter:
 			pad.Emit("key", "ENT")
-		}
-
-		if event.Key == keyboard.KeyF12 {
+		case keyboard.KeyF12:
 			os.Exit(0)
 		}
 	}

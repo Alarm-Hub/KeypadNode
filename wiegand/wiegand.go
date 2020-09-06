@@ -1,7 +1,6 @@
 package wiegand
 
 import (
-	"fmt"
 	"github.com/Phill93/DoorManager/log"
 )
 
@@ -41,12 +40,10 @@ func (k *Keypad) RemoveListener(e string, ch chan string) {
 }
 
 func (k *Keypad) Emit(e string, response string) {
-	log.Debugf("Event %s is emitted!", e)
+	log.Debugf("Event %s is emitted with Value %s!", e, response)
 	if _, ok := k.listeners[e]; ok {
 		for _, handler := range k.listeners[e] {
-			fmt.Print("Found!")
 			go func(handler chan string) {
-				log.Debug("Writing data!")
 				handler <- response
 			}(handler)
 		}
