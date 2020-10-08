@@ -1,39 +1,14 @@
 package main
 
 import (
-  "github.com/Phill93/DoorManager/code"
-  "github.com/Phill93/DoorManager/communicator"
-  "github.com/Phill93/DoorManager/config"
-
-  //"github.com/Phill93/DoorManager/communicator"
-  //"github.com/Phill93/DoorManager/config"
-  "github.com/Phill93/DoorManager/log"
-  "github.com/Phill93/DoorManager/wiegand"
-  "time"
+	"github.com/Phill93/DoorManager/code"
+	"github.com/Phill93/DoorManager/log"
+	"github.com/Phill93/DoorManager/wiegand"
+	"time"
 )
 
 func main() {
 	log.Infof("Application started at %s", time.Now())
-
-	cfg := config.Config()
-
-	c := communicator.NewCommunicator(cfg.GetString("controller_url"))
-	go func() {
-	  for {
-      ok, err := c.VerifyAccess()
-      if err != nil {
-        log.Error(err)
-      }
-      if !ok {
-        err = c.Refresh()
-        if err != nil {
-          log.Error(err)
-        }
-      }
-      time.Sleep(time.Second * 20)
-    }
-  }()
-
 	pad := wiegand.Keypad{}
 	code2 := code.Code{}
 
@@ -49,24 +24,15 @@ func main() {
 		}
 	}(&pad, &code2)
 
-	go func(c *code.Code, com *communicator.Communicator) {
+	go func(c *code.Code) {
 		codeCode := make(chan string)
 		c.AddListener("ready", codeCode)
 		for {
 			log.Debugf("Waiting for code!")
 			code := <-codeCode
 			log.Debugf("Received code %s", code)
-			ok, err := com.ValidateCode(code)
-			if err != nil {
-			  log.Error(err)
-      }
-      if !ok {
-        log.Errorf("Code %s is invalid!", code)
-      } else {
-        log.Info("Code %s is valid!", code)
-      }
 		}
-	}(&code2, &c)
+	}(&code2)
 
 	go wiegand.InitReader(&pad)
 
