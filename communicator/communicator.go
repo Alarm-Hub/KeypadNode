@@ -1,15 +1,18 @@
 package communicator
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/Phill93/DoorManager/config"
-	"github.com/Phill93/DoorManager/log"
-	jwt "github.com/dgrijalva/jwt-go"
-	"net/http"
-	"time"
+  "bytes"
+  "encoding/json"
+  "errors"
+  "fmt"
+  "github.com/Phill93/DoorManager/config"
+  "github.com/Phill93/DoorManager/log"
+  jwt "github.com/dgrijalva/jwt-go"
+  "github.com/spf13/viper"
+  "io/ioutil"
+  "net/http"
+  "os"
+  "time"
 )
 
 // Handles the communication with the controller app
@@ -20,19 +23,66 @@ var apiClient = &http.Client{
 	Timeout: time.Second * cfg.GetDuration("http_timeout"),
 }
 
-type communicator struct {
+type Communicator struct {
 	access      string
 	refresh     string
 	lastRefresh time.Time
 	baseUrl     string
 }
 
-func NewCommunicator(access string, refresh string, baseUrl string) *communicator {
-	return &communicator{access: access, refresh: refresh, baseUrl: baseUrl}
+type tokens struct {
+  Access      string  `json:"access"`
+  Refresh     string  `json:"refresh"`
 }
 
-func (c communicator) VerifyAccess() (bool, error) {
+func NewCommunicator(baseUrl string) Communicator {
+  var com Communicator
+  com.baseUrl = baseUrl
+  t := com.loadTokens()
+  com.access = t.Access
+  com.refresh = t.Refresh
+  ok, err := com.VerifyAccess()
+  if err != nil {
+    log.Panic(err)
+  }
+  if !ok {
+    log.Panic("Tokens are not valid!")
+  }
+	return com
+}
+
+func (c Communicator) loadTokens() tokens {
+  jsonFile, err := os.Open("tokens.json")
+  if err != nil {
+    log.Panic(err)
+  }
+  defer jsonFile.Close()
+  jsonBytes, err := ioutil.ReadAll(jsonFile)
+  if err != nil {
+    log.Panic(err)
+  }
+  var tokens tokens
+  err = json.Unmarshal(jsonBytes, &tokens)
+  if err != nil {
+    log.Panic(err)
+  }
+  return tokens
+}
+
+func (c Communicator) saveTokens(tokens tokens) {
+  file, err := json.Marshal(&tokens)
+  if err != nil {
+    log.Panic(err)
+  }
+  err = ioutil.WriteFile("tokens.json",file,0600)
+  if err != nil {
+    log.Panic(err)
+  }
+}
+
+func (c Communicator) VerifyAccess() (bool, error) {
 	if c.baseUrl != "" && c.access != "" {
+	  log.Debug("Try to verify token")
 		p, err := json.Marshal(map[string]string{
 			"token": c.access,
 		})
@@ -44,16 +94,19 @@ func (c communicator) VerifyAccess() (bool, error) {
 			return false, err
 		}
 		if res.StatusCode == 200 {
+		  log.Debug("Token is valid")
 			return true, nil
 		}
+		log.Debug("Token is invalid")
 		return false, err
 	} else {
 		return false, errors.New("Base Url or access token empty")
 	}
 }
 
-func (c *communicator) Refresh() error {
+func (c *Communicator) Refresh() error {
 	if c.baseUrl != "" && c.access != "" {
+	  log.Debug("Try to refresh tokens")
 		p, err := json.Marshal(map[string]string{
 			"refresh": c.refresh,
 		})
@@ -61,20 +114,33 @@ func (c *communicator) Refresh() error {
 			return err
 		}
 		res, err := apiClient.Post(fmt.Sprintf("%s/api/token/refresh/", c.baseUrl), "application/json;charset=utf-8", bytes.NewBuffer(p))
+		defer func() {
+		  if res != nil {
+		    _ = res.Body.Close()
+      }
+    }()
 		if err != nil {
 			return err
 		}
-		type response struct {
-			access  string
-			refresh string
-		}
-		var r response
-		err = json.NewDecoder(res.Body).Decode(&r)
+		if res.StatusCode != 200 {
+		  log.Error("Failed to refresh token")
+		  return nil
+    }
+    body, err := ioutil.ReadAll(res.Body)
+    if err != nil {
+      log.Error(err)
+    }
+    var r tokens
+		err = json.Unmarshal(body, &r)
 		if err != nil {
 			return err
 		}
-		c.access = r.access
-		c.refresh = r.refresh
+		c.access = r.Access
+		c.refresh = r.Refresh
+		c.saveTokens(r)
+		if cfg.ConfigFileUsed() != "" {
+		  _ = viper.WriteConfig()
+    }
 		c.lastRefresh = time.Now()
 		_, _ = c.VerifyAccess()
 		return nil
@@ -83,7 +149,7 @@ func (c *communicator) Refresh() error {
 	}
 }
 
-func (c communicator) ValidateCode(code string) (bool, error) {
+func (c Communicator) ValidateCode(code string) (bool, error) {
 	if c.baseUrl != "" && c.access != "" {
 		p, err := json.Marshal(map[string]string{
 			"code": code,
@@ -91,7 +157,12 @@ func (c communicator) ValidateCode(code string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		res, err := apiClient.Post(fmt.Sprintf("%s/api/codes/verify/", c.baseUrl), "application/json;charset=utf-8", bytes.NewBuffer(p))
+		req, err := http.NewRequest("post", fmt.Sprintf("%s/api/codes/verify/", c.baseUrl), bytes.NewBuffer(p))
+		if err != nil {
+		  return false, err
+    }
+    req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.access))
+		res, err := apiClient.Do(req)
 		if err != nil {
 			return false, err
 		}
@@ -124,7 +195,7 @@ func parseToken(tokenString string) interface{} {
 	return claims
 }
 
-func (c *communicator) TokenWatcher() {
+func (c *Communicator) TokenWatcher() {
 	for {
 		ok, err := c.VerifyAccess()
 		if err == nil {
@@ -133,13 +204,14 @@ func (c *communicator) TokenWatcher() {
 		if ok {
 			claims := parseToken(c.access)
 			var tm time.Time
-			switch exp := claims["exp"].(type) {
-			case float64:
-				tm = time.Unix(int64(exp), 0)
-			case json.Number:
-				v, _ := exp.Int64()
-				tm = time.Unix(v, 0)
-			}
+			fmt.Print(claims)
+			//switch exp := claims["exp"].(type) {
+      //  case float64:
+      //    tm = time.Unix(int64(exp), 0)
+      //  case json.Number:
+      //    v, _ := exp.Int64()
+      //    tm = time.Unix(v, 0)
+			//}
 			diff := time.Now().Sub(tm).Seconds()
 			if diff < cfg.GetFloat64("token_refresh_threshold") {
 				err = c.Refresh()
