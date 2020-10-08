@@ -3,6 +3,7 @@ package code
 import (
 	"github.com/Phill93/DoorManager/config"
 	"github.com/Phill93/DoorManager/log"
+	"github.com/Phill93/DoorManager/wiegand"
 	"strings"
 	"time"
 )
@@ -62,7 +63,7 @@ func (c *Code) Input(key string) {
 
 	if key == "ENT" {
 		log.Debug("Enter Key received!")
-		c.Emit("ready", strings.Join(c.digits, ""))
+		c.Emit("code", strings.Join(c.digits, ""))
 		c.Clear()
 	} else if key == "ESC" {
 		log.Debug("Escape Key received!")
@@ -88,5 +89,16 @@ func checkTimeout(timestamp time.Time, timeout int) bool {
 	} else {
 		log.Infof("Timeout not reached! %f !> %f", offset.Seconds(), float64(timeout))
 		return false
+	}
+}
+
+func (c *Code) ListenForKey(p *wiegand.Keypad) {
+	events := make(chan string)
+	p.AddListener("key", events)
+	for {
+		log.Debugf("Code: Waiting for key")
+		event := <-events
+		log.Debugf("Code: Received key %s", event)
+		c.Input(event)
 	}
 }
