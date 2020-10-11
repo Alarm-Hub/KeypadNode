@@ -15,6 +15,7 @@ import (
 var c *gpiod.Chip
 
 func InitReader(pad *Keypad) {
+	log.Info("Reader initializing!")
 	cfg := config.Config()
 	c, _ = gpiod.NewChip("gpiochip0", gpiod.WithConsumer("KeypadNode"))
 	lowWd = make(chan bool, 1)

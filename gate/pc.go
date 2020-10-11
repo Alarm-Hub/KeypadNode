@@ -1,3 +1,5 @@
+// +build !rpi
+
 package gate
 
 import "fmt"

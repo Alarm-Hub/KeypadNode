@@ -1,3 +1,5 @@
+// +build !rpi
+
 package alarm
 
 import "github.com/eiannone/keyboard"

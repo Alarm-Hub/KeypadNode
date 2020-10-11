@@ -8,6 +8,7 @@ import (
 type Alarm struct {
 	lastAlarm time.Time
 	listeners map[string][]chan string
+	Pin       int
 }
 
 func (a *Alarm) AddListener(e string, ch chan string) {
