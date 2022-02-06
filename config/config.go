@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -45,14 +46,29 @@ func init() {
 
 func readViperConfig(appName string) *viper.Viper {
 	v := viper.New()
+
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			fmt.Print("Config file not found! Only environment variables are used!\n\r")
+		} else {
+			fmt.Print(err)
+			fmt.Print("\n\r")
+		}
+	}
+
 	v.SetEnvPrefix(appName)
 	v.AutomaticEnv()
 
 	// global defaults
-	
+
 	v.SetDefault("json_logs", false)
 	v.SetDefault("loglevel", "debug")
-	
+	v.SetDefault("data_low", 14)
+	v.SetDefault("data_high", 15)
+	v.SetDefault("pad_timeout", 10)
 
 	return v
 }

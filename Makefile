@@ -35,7 +35,7 @@ build:
 build-rpi:
 	@echo "building ${BIN_NAME} ${VERSION}"
 	@echo "GOPATH=${GOPATH}"
-	env GOOS=linux GOARCH=arm GOARM=5 go build -ldflags "-X github.com/Phill93/DoorManager/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/Phill93/DoorManager/version.BuildDate=${BUILD_DATE}" -o bin/${BIN_NAME}-rpi
+	env GOOS=linux GOARCH=arm GOARM=5 go build -ldflags "-X github.com/Phill93/DoorManager/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/Phill93/DoorManager/version.BuildDate=${BUILD_DATE}" -o bin/${BIN_NAME}-rpi -tags rpi
 
 
 get-deps:
